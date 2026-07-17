@@ -26,9 +26,9 @@ import seaborn as sns
 from sklearn.metrics import confusion_matrix, classification_report
 
 # ===================== CONFIG =====================
-REAL_DIR = r"C:\Users\ASUS\OneDrive\Capstone Project\Facenet Code\original_sequences-20251018T143304Z-1-001\original_sequences\youtube\c23\videos"
-FAKE_DIR = r"C:\Users\ASUS\OneDrive\Capstone Project\Facenet Code\manipulated_sequences-20251018T143143Z-1-001\manipulated_sequences\Deepfakes\c23\videos"
-CACHE_DIR = r"C:\Users\ASUS\OneDrive\Capstone Project\Facenet Code\processed_faces"
+REAL_DIR = "dataset/real"
+FAKE_DIR = "dataset/fake"
+CACHE_DIR = "processed_faces"
 REPORT_DIR = "training_reports"
 
 N_FRAMES = 16
@@ -108,7 +108,7 @@ class CachedDeepfakeDataset(Dataset):
         self.fake_videos = list(Path(fake_dir).glob("*.mp4"))
         self.items = [(str(v), 0) for v in self.real_videos] + [(str(v), 1) for v in self.fake_videos]
         self.cache_dir = cache_dir
-        print(f"📦 Found {len(self.real_videos)} real, {len(self.fake_videos)} fake videos")
+        print(f" Found {len(self.real_videos)} real, {len(self.fake_videos)} fake videos")
 
     def __len__(self): return len(self.items)
 
@@ -225,7 +225,7 @@ def main():
     SAVE_BEST_BASE = True
     BEST_BASE_PATH = "best_detector_base.pth"
 
-    print(f"🚀 Using device: {DEVICE}")
+    print(f" Using device: {DEVICE}")
     ds = CachedDeepfakeDataset(REAL_DIR, FAKE_DIR, CACHE_DIR)
     n = len(ds)
     if n == 0:
@@ -252,7 +252,7 @@ def main():
         train_loader = DataLoader(train_ds, batch_size=BATCH_SIZE, sampler=sampler, num_workers=0)
 
     val_loader = DataLoader(val_ds, batch_size=BATCH_SIZE, shuffle=False, num_workers=0)
-    print(f"📊 Train batches: {len(train_loader)}, Val batches: {len(val_loader)}")
+    print(f" Train batches: {len(train_loader)}, Val batches: {len(val_loader)}")
 
     # --- Model, EMA, Loss, Optimizer, Scheduler, Scaler ---
     model = DeepfakeDetector().to(DEVICE)
@@ -268,7 +268,7 @@ def main():
 
     # --- Training loop ---
     for e in range(1, EPOCHS + 1):
-        print(f"\n🧠 Epoch {e}/{EPOCHS}")
+        print(f"\n Epoch {e}/{EPOCHS}")
 
         # Train (enable ema updates)
         tr_loss, tr_acc = train_epoch(model, train_loader, opt, crit, None, scaler, ema, DEVICE, use_ema=True)
@@ -295,7 +295,7 @@ def main():
             'val_loss': val_loss
         }
         torch.save(ckpt, CHECKPOINT_PATH)
-        print(f"💾 Latest checkpoint saved to {CHECKPOINT_PATH}")
+        print(f" Latest checkpoint saved to {CHECKPOINT_PATH}")
 
         # Save best models (EMA and optional base) when validation accuracy improves
         if val_acc > best_acc:
@@ -303,14 +303,14 @@ def main():
             # Save EMA model weights (recommended)
             if hasattr(ema, "ema"):
                 torch.save(ema.ema.state_dict(), BEST_MODEL_PATH)
-                print(f"🏆 New best EMA model saved (Val Acc: {best_acc:.2f}%) → {BEST_MODEL_PATH}")
+                print(f" New best EMA model saved (Val Acc: {best_acc:.2f}%) → {BEST_MODEL_PATH}")
             # Optionally save base (non-EMA) model weights
             if SAVE_BEST_BASE:
                 torch.save(model.state_dict(), BEST_BASE_PATH)
-                print(f"🏆 New best BASE model saved (Val Acc: {best_acc:.2f}%) → {BEST_BASE_PATH}")
+                print(f" New best BASE model saved (Val Acc: {best_acc:.2f}%) → {BEST_BASE_PATH}")
 
     # ===================== Final Evaluation (load best model if available) =====================
-    print("\n📊 Generating final evaluation report using best model (EMA preferred)...")
+    print("\n Generating final evaluation report using best model (EMA preferred)...")
 
     # Prefer EMA best for evaluation; fall back to saved base best if EMA not available; else in-memory ema; else base in-memory
     eval_model = None
@@ -318,12 +318,12 @@ def main():
         eval_model = DeepfakeDetector().to(DEVICE)
         eval_model.load_state_dict(torch.load(BEST_MODEL_PATH, map_location=DEVICE))
         eval_model.eval()
-        print(f"🔥 Loaded best EMA model from {BEST_MODEL_PATH}")
+        print(f" Loaded best EMA model from {BEST_MODEL_PATH}")
     elif SAVE_BEST_BASE and os.path.exists(BEST_BASE_PATH):
         eval_model = DeepfakeDetector().to(DEVICE)
         eval_model.load_state_dict(torch.load(BEST_BASE_PATH, map_location=DEVICE))
         eval_model.eval()
-        print(f"🔁 EMA not found — loaded best BASE model from {BEST_BASE_PATH}")
+        print(f" EMA not found — loaded best BASE model from {BEST_BASE_PATH}")
     else:
         try:
             eval_model = ema.ema
@@ -359,7 +359,7 @@ def main():
         f.write(f"Validation Loss: {val_loss:.6f}\n")
         f.write(f"Validation Accuracy (%): {val_acc:.4f}\n\n")
         f.write(report)
-    print(f"✅ Classification report saved to {report_path}")
+    print(f" Classification report saved to {report_path}")
 
     # Confusion matrix and plot
     cm = confusion_matrix(labels, preds)
@@ -373,10 +373,10 @@ def main():
     cm_path = os.path.join(REPORT_DIR, "confusion_matrix.png")
     plt.savefig(cm_path)
     plt.close()
-    print(f"✅ Confusion matrix saved to {cm_path}")
+    print(f" Confusion matrix saved to {cm_path}")
 
     # Training curves plot
-    print("\n📈 Saving training curves...")
+    print("\n Saving training curves...")
     epochs = np.arange(1, len(train_losses) + 1)
     plt.figure(figsize=(10, 4))
 
@@ -400,8 +400,8 @@ def main():
     curves_path = os.path.join(REPORT_DIR, "training_curves.png")
     plt.savefig(curves_path)
     plt.close()
-    print(f"✅ Training curves saved to {curves_path}")
+    print(f" Training curves saved to {curves_path}")
 
-if _name_ == "_main_":
+if _name_ == "__main__":
     main()
 
